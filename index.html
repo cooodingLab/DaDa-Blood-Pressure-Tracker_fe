@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>達達量血壓 – 血壓管理小幫手</title>
     <link rel="icon" type="image/svg" href="/favicon3.svg" sizes="180x180">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,7 +24,7 @@
 
             <div class="nav-links" id="navLinks">
                 <a href="#dashboard" class="nav-link" onclick="navigateTo('dashboard')">統計</a>
-                <a href="#newRecord" class="nav-link" onclick="navigateTo('newRecord')">紀錄</a>
+                <a href="#newRecord" class="nav-link" onclick="navigateTo('newRecord')">建立</a>
                 <a href="#history" class="nav-link" onclick="navigateTo('history')">歷史</a>
                 <a href="#medicalRecord" class="nav-link" onclick="navigateTo('medicalRecord')">回診</a>
                 <a href="#hero" class="nav-link logout-link" onclick="handleLogout()">登出</a>
@@ -153,10 +151,17 @@
         <section id="history" class="section section-history">
              <div class="container">
                 <h2>歷史紀錄查詢</h2>
-                <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                    <select class="form-input" style="flex:1;"><option>2025 年</option></select>
-                    <select class="form-input" style="flex:1;"><option>12 月</option></select>
+                
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label class="form-label">選擇查詢月份</label>
+                    <div style="display: flex; gap: 15px;">
+                        <select id="historyYear" class="form-input" style="flex: 1; font-weight: bold; -webkit-appearance: none;">
+                            </select>
+                        <select id="historyMonth" class="form-input" style="flex: 1; font-weight: bold; -webkit-appearance: none;">
+                            </select>
+                    </div>
                 </div>
+
                 <div id="historyListContainer">
                     <ul class="record-list" id="historyList" style="display: none;"></ul>
                     <div id="historyEmptyState" style="text-align: center; padding: 40px 0; background: #FFF; border-radius: 20px; border: 2px dashed #E0F2EB;">
@@ -218,6 +223,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
