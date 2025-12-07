@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>達達量血壓 – 銀髮族血壓管理小幫手</title>
+    <link rel="icon" type="image/svg" href="/favicon3.svg" sizes="180x180">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="site-header">
+        <nav class="nav">
+            <a href="#hero" class="brand-name" onclick="navigateTo('hero')">
+                <span style="font-size: 1.8rem; margin-right: 8px;">🩺</span> 
+                達達量血壓
+            </a>
+            
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <div class="nav-links" id="navLinks">
+                <a href="#dashboard" class="nav-link" onclick="navigateTo('dashboard')">統計</a>
+                <a href="#newRecord" class="nav-link" onclick="navigateTo('newRecord')">紀錄</a>
+                <a href="#history" class="nav-link" onclick="navigateTo('history')">歷史</a>
+                <a href="#medicalRecord" class="nav-link" onclick="navigateTo('medicalRecord')">就醫</a>
+                <a href="#hero" class="nav-link logout-link" onclick="handleLogout()">登出</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="hero" class="section section-hero active">
+             <div class="container">
+                <div class="hero-content">
+                    <h1>血壓管理小幫手</h1>
+                    <p>天天定時量血壓，早早遠離高血壓！</p>
+                    <button class="btn" onclick="navigateTo('login')" style="font-size: 1.3rem; padding: 15px 50px; border-radius: 60px;">開始量血壓 GO!</button>
+                </div>
+                <div class="hero-image-container" style="margin-top: 30px; text-align: center;">
+                    <svg width="340" height="240" viewBox="0 0 340 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 10px 20px rgba(79, 181, 140, 0.2)); animation: float 3s ease-in-out infinite; max-width: 100%;">
+                        <g clip-path="url(#clip0_bpm)">
+                            <circle cx="170" cy="120" r="110" fill="#E0F2EB" opacity="0.7"/>
+                            <circle cx="60" cy="60" r="30" fill="#FFECEC" opacity="0.8"/>
+                            <circle cx="280" cy="180" r="25" fill="#FFFDF9" opacity="0.9"/>
+                            <path d="M300 80Q310 70 320 80T340 80" stroke="#E67F50" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+                            <path d="M120 160 C 100 180, 60 180, 40 150" stroke="#4FB58C" stroke-width="8" stroke-linecap="round" fill="none"/>
+                            <rect x="20" y="100" width="60" height="80" rx="15" fill="#4FB58C"/>
+                            <path d="M30 110H70" stroke="#3D9171" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+                            <path d="M30 130H70" stroke="#3D9171" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+                            <path d="M30 150H70" stroke="#3D9171" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+                            <rect x="120" y="50" width="160" height="140" rx="30" fill="#FFFDF9" stroke="#4FB58C" stroke-width="6"/>
+                            <rect x="140" y="70" width="120" height="70" rx="10" fill="#E0F2EB"/>
+                            <text x="165" y="115" font-family="Arial" font-size="32" fill="#3D9171" font-weight="800">120</text>
+                            <path d="M200 105 C 200 95, 210 95, 215 100 C 220 95, 230 95, 230 105 C 230 115, 215 125, 215 125 C 215 125, 200 115, 200 105 Z" fill="#E67F50"/>
+                            <text x="218" y="115" font-family="Arial" font-size="24" fill="#3D9171" font-weight="bold">80</text>
+                            <circle cx="160" cy="155" r="4" fill="#485E53"/> <circle cx="185" cy="155" r="4" fill="#485E53"/> <path d="M165 165 Q 172.5 172, 180 165" stroke="#485E53" stroke-width="3" stroke-linecap="round" fill="none"/> <circle cx="240" cy="160" r="20" fill="#E67F50"/>
+                            <text x="240" y="166" font-family="Arial" font-size="10" fill="#FFF" text-anchor="middle" font-weight="bold">開始</text>
+                        </g>
+                        <defs><clipPath id="clip0_bpm"><rect width="340" height="240" fill="white"/></clipPath></defs>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <section id="login" class="section section-login">
+            <div class="container">
+                <h2>會員登入</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">使用者名稱</label>
+                        <input type="text" class="form-input" placeholder="請輸入您的帳號">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">通關密碼</label>
+                        <input type="password" class="form-input" placeholder="請輸入您的密碼">
+                    </div>
+                    <button type="submit" class="btn" style="width: 100%; padding: 15px;">解鎖我的健康紀錄</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="dashboard" class="section section-dashboard">
+            <div class="container">
+                <h2>健康趨勢圖</h2>
+                <div class="chart-controls">
+                    <button class="range-btn active" data-range="7">近7天</button>
+                    <button class="range-btn" data-range="30">近30天</button>
+                    <button class="range-btn" data-range="90">近90天</button>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="bpChart"></canvas>
+                    <div id="chartEmptyState" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                        <span style="font-size: 3rem;">📉</span>
+                        <p style="color: var(--color-text-light);">資料不足，無法顯示圖表</p>
+                    </div>
+                </div>
+                <div style="text-align: center; margin: 25px 0;">
+                    <button class="btn btn-create" onclick="navigateTo('newRecord')">✏️ 建立今日新紀錄</button>
+                </div>
+                <h3>最近紀錄列表</h3>
+                <div id="recordListContainer">
+                    <ul class="record-list" id="recordList" style="display: none;"></ul>
+                    <div id="emptyState" style="text-align: center; padding: 30px 0; background: #FFF; border-radius: 20px; border: 2px dashed #E0F2EB; display: none;">
+                        <div style="font-size: 4rem; margin-bottom: 10px;">🍃</div>
+                        <p style="color: var(--color-text-light); font-size: 1.1rem; margin: 0;">這裡空空的...<br>快去量第一次血壓吧！</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="newRecord" class="section section-newRecord">
+            <div class="container">
+                <h2 id="recordFormTitle">建立新紀錄</h2>
+                <form id="recordForm">
+                    <input type="hidden" id="recordId">
+                    <div class="form-group">
+                        <label class="form-label">檢測日期</label>
+                        <input type="date" class="form-input" id="recordDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">檢測時間</label>
+                        <div class="time-selector">
+                            <button type="button" class="time-btn selected">☀️ 早上</button>
+                            <button type="button" class="time-btn">🌙 晚上</button>
+                        </div>
+                    </div>
+                    <div class="measurement-group">
+                        <h3>第一次測量</h3>
+                        <div class="form-group"><label class="form-label">收縮壓 (高壓)</label><input type="number" class="form-input" id="sbp_1" placeholder="例如：120"></div>
+                        <div class="form-group"><label class="form-label">舒張壓 (低壓)</label><input type="number" class="form-input" id="dbp_1" placeholder="例如：80"></div>
+                        <div class="form-group"><label class="form-label">脈搏</label><input type="number" class="form-input" id="pulse_1" placeholder="例如：72"></div>
+                    </div>
+                    <div class="measurement-group" style="margin-top: 25px;">
+                        <h3>第二次測量</h3>
+                        <div class="form-group"><label class="form-label">收縮壓 (高壓)</label><input type="number" class="form-input" id="sbp_2" placeholder="例如：118"></div>
+                        <div class="form-group"><label class="form-label">舒張壓 (低壓)</label><input type="number" class="form-input" id="dbp_2" placeholder="例如：78"></div>
+                        <div class="form-group"><label class="form-label">脈搏</label><input type="number" class="form-input" id="pulse_2" placeholder="例如：70"></div>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-top: 35px;">
+                        <button type="button" class="btn" style="flex: 1.5; padding: 15px;" id="saveRecordBtn">確定建立 ✓</button>
+                        <button type="button" class="btn btn-secondary" style="flex: 1; padding: 15px;" onclick="navigateTo('dashboard')">取消 ✕</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="history" class="section section-history">
+             <div class="container">
+                <h2>歷史紀錄查詢</h2>
+                <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                    <select class="form-input" style="flex:1;"><option>2025 年</option></select>
+                    <select class="form-input" style="flex:1;"><option>12 月</option></select>
+                </div>
+                <div id="historyListContainer">
+                    <ul class="record-list" id="historyList" style="display: none;"></ul>
+                    <div id="historyEmptyState" style="text-align: center; padding: 40px 0; background: #FFF; border-radius: 20px; border: 2px dashed #E0F2EB;">
+                        <div style="font-size: 4rem; margin-bottom: 10px; opacity: 0.6;">📭</div>
+                        <p style="color: var(--color-text-light); font-size: 1.1rem; margin: 0;">這個月份還沒有紀錄喔<br>要不要現在去測量一下？</p>
+                        <button class="btn btn-create" style="margin-top: 20px; transform: scale(0.9);" onclick="navigateTo('newRecord')">去建立紀錄 ➔</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="medicalRecord" class="section section-medicalRecord">
+            <div class="container">
+                <h2>就醫紀錄</h2>
+                <form id="medicalForm">
+                    <div class="form-group">
+                        <label class="form-label">上傳醫生檢查報告</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="reportFile" accept="image/*" style="display: none !important;">
+                            <label for="reportFile" class="file-upload-box">
+                                <span class="upload-icon">📷</span>
+                                <span class="upload-text">點擊拍照或上傳圖片</span>
+                                <span class="upload-hint">支援 jpg, png 格式</span>
+                            </label>
+                            <div id="fileNameDisplay" class="file-name-display"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">檢查日期</label>
+                        <input type="date" class="form-input" id="medicalDate">
+                    </div>
+                    <button type="submit" class="btn" style="width: 100%; padding: 15px;" id="saveMedicalBtn">上傳儲存</button>
+                </form>
+
+                <hr style="margin: 35px 0; border: none; border-top: 3px dashed #E8E8E8;">
+                
+                <h3>過去紀錄</h3>
+                
+                <div id="medicalListContainer">
+                    <ul class="record-list" id="medicalList" style="display: none;"></ul>
+                    
+                    <div id="medicalEmptyState" style="text-align: center; padding: 30px 0; background: #FFF; border-radius: 20px; border: 2px dashed #E0F2EB;">
+                        <div style="font-size: 4rem; margin-bottom: 10px; opacity: 0.6;">🏥</div>
+                        <p style="color: var(--color-text-light); font-size: 1.1rem; margin: 0;">目前沒有就醫紀錄<br>記得定期回診檢查喔！</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>檢查報告</h3>
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="報告圖片">
+                <p id="modalLoading">圖片載入中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
