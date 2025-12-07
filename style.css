@@ -108,7 +108,16 @@ h3 { font-size: 1.4rem; color: var(--color-text); margin-top: 30px;}
 .form-input { width: 100%; padding: 15px 20px; font-size: 1.1rem; border: 2px solid #E0F2EB; border-radius: 50px; box-sizing: border-box; background: #F9FCFB; transition: all 0.3s; color: var(--color-text); }
 .form-input:focus { border-color: var(--color-primary); background: #FFF; box-shadow: 0 0 0 4px rgba(79, 181, 140, 0.1); outline: none; }
 #reportFile { display: none !important; }
-.file-upload-box { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 30px 20px; border: 3px dashed var(--color-primary); background-color: var(--color-primary-light); border-radius: var(--border-radius-card); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; color: var(--color-secondary-text); opacity: 0.9; }
+
+/* ★★★ 修改處：顏色改為 var(--color-text) ★★★ */
+.file-upload-box { 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 30px 20px; 
+    border: 3px dashed var(--color-primary); background-color: var(--color-primary-light); border-radius: var(--border-radius-card); 
+    cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; 
+    color: var(--color-text); /* 原本是 secondary-text，改成主要文字顏色 */
+    opacity: 0.9; 
+}
+
 .file-upload-box:hover { opacity: 1; background-color: #D4EBE2; transform: scale(1.02); border-color: var(--color-primary-dark); }
 .upload-icon { font-size: 3rem; margin-bottom: 10px; }
 .upload-text { font-size: 1.2rem; font-weight: bold; }
