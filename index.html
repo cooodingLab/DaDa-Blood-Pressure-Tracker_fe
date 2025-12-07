@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>達達量血壓 – 銀髮族血壓管理小幫手</title>
+    <title>達達量血壓 – 血壓管理小幫手</title>
     <link rel="icon" type="image/svg" href="/favicon3.svg" sizes="180x180">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -28,7 +28,7 @@
                 <a href="#dashboard" class="nav-link" onclick="navigateTo('dashboard')">統計</a>
                 <a href="#newRecord" class="nav-link" onclick="navigateTo('newRecord')">紀錄</a>
                 <a href="#history" class="nav-link" onclick="navigateTo('history')">歷史</a>
-                <a href="#medicalRecord" class="nav-link" onclick="navigateTo('medicalRecord')">就醫</a>
+                <a href="#medicalRecord" class="nav-link" onclick="navigateTo('medicalRecord')">回診</a>
                 <a href="#hero" class="nav-link logout-link" onclick="handleLogout()">登出</a>
             </div>
         </nav>
@@ -70,7 +70,7 @@
 
         <section id="login" class="section section-login">
             <div class="container">
-                <h2>會員登入</h2>
+                <h2>登入</h2>
                 <form id="loginForm">
                     <div class="form-group">
                         <label class="form-label">使用者名稱</label>
@@ -170,7 +170,7 @@
 
         <section id="medicalRecord" class="section section-medicalRecord">
             <div class="container">
-                <h2>就醫紀錄</h2>
+                <h2>回診紀錄</h2>
                 <form id="medicalForm">
                     <div class="form-group">
                         <label class="form-label">上傳醫生檢查報告</label>
@@ -200,7 +200,7 @@
                     
                     <div id="medicalEmptyState" style="text-align: center; padding: 30px 0; background: #FFF; border-radius: 20px; border: 2px dashed #E0F2EB;">
                         <div style="font-size: 4rem; margin-bottom: 10px; opacity: 0.6;">🏥</div>
-                        <p style="color: var(--color-text-light); font-size: 1.1rem; margin: 0;">目前沒有就醫紀錄<br>記得定期回診檢查喔！</p>
+                        <p style="color: var(--color-text-light); font-size: 1.1rem; margin: 0;">目前沒有回診紀錄<br>記得定期回診檢查喔！</p>
                     </div>
                 </div>
             </div>
