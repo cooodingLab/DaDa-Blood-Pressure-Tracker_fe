@@ -3,7 +3,7 @@
 let globalRecords = [];
 let myChart = null;
 
-// --- 輔助函式：取得本地端今天的日期字串 ---
+// --- 輔助函式：取得本地端今天的日期字串 (YYYY-MM-DD) ---
 function getTodayString() {
     const now = new Date();
     const year = now.getFullYear();
@@ -12,40 +12,35 @@ function getTodayString() {
     return `${year}-${month}-${day}`;
 }
 
-// --- 輔助函式：判斷血壓狀態 ---
+// --- 輔助函式：統一處理日期格式 (兼容 Unix Timestamp 與 文字日期) ---
+// 解決圖表空白或列表顯示 Invalid Date 的問題
+function parseDate(val) {
+    if (!val) return new Date().getTime();
+    // 如果已經是數字 (Timestamp)，直接回傳
+    if (typeof val === 'number') return val;
+    // 如果是字串但長得像數字 (例如 "1765152000000")，轉成數字
+    if (!isNaN(val) && !isNaN(parseFloat(val))) return Number(val);
+    // 如果是日期字串 (例如 "2025-12-08" 或 "2025-12-08T...")，轉成時間戳記
+    return new Date(val).getTime();
+}
+
+// --- 輔助函式：判斷血壓狀態 (決定圓點顏色) ---
 function determineBpStatus(sbp, dbp) {
     const s = Number(sbp);
     const d = Number(dbp);
 
     if (s >= 140 || d >= 90) {
-        return 'status-stage2'; 
+        return 'status-stage2'; // 第二期 (深紅)
     } else if ((s >= 130 && s <= 139) || (d >= 80 && d <= 89)) {
-        return 'status-stage1'; 
+        return 'status-stage1'; // 第一期 (深橘)
     } else if ((s >= 120 && s <= 129) && d < 80) {
-        return 'status-elevated'; 
+        return 'status-elevated'; // 偏高 (黃橘)
     } else {
-        return 'status-normal'; 
+        return 'status-normal'; // 正常 (綠)
     }
 }
 
-// --- 輔助函式：渲染統計區塊 (避免重複代碼) ---
-function renderSummaryBlock(container, sbpSum, dbpSum, count) {
-    if (count === 0) return;
-    const finalAvgSbp = Math.round(sbpSum / count);
-    const finalAvgDbp = Math.round(dbpSum / count);
-
-    const div = document.createElement('li');
-    div.className = 'average-summary-block';
-    div.innerHTML = `
-        <span class="average-summary-icon">💡</span>
-        <div>
-            前 6 天的血壓平均值為：<br>
-            收縮壓/舒張壓 <span style="color:#d32f2f; font-size:1.2rem;">${finalAvgSbp}</span> / <span style="color:#d32f2f; font-size:1.2rem;">${finalAvgDbp}</span> mmHg
-        </div>
-    `;
-    container.appendChild(div);
-}
-
+// --- SweetAlert2 輔助函式 ---
 function showToast(icon, title) {
     Swal.fire({
         icon: icon,
@@ -80,6 +75,7 @@ function showConfirm(title, text, confirmCallback) {
     });
 }
 
+// --- 路由 ---
 function navigateTo(sectionId) {
     document.querySelectorAll('.section').forEach(el => {
         el.classList.remove('active');
@@ -97,10 +93,12 @@ function navigateTo(sectionId) {
     const navLinksContainer = document.querySelector('.nav-links');
     const hamburger = document.getElementById('hamburger');
     
+    // 如果是首頁或登入頁，隱藏選單
     if (sectionId === 'hero' || sectionId === 'login') {
         if(navLinksContainer) navLinksContainer.style.display = 'none';
         if(hamburger) hamburger.style.display = 'none';
     } else {
+        // 登入後重置 display
         if(navLinksContainer) navLinksContainer.style.display = ''; 
         if(hamburger) hamburger.style.display = '';
     }
@@ -112,6 +110,7 @@ function navigateTo(sectionId) {
         }
     });
 
+    // 手機版切換頁面後自動收合選單
     if (navLinksContainer) navLinksContainer.classList.remove('active');
     if (hamburger) hamburger.classList.remove('active');
 
@@ -132,6 +131,7 @@ function handleLogout() {
     });
 }
 
+// --- Dashboard ---
 function loadDashboardData() {
     const chartWrapper = document.querySelector('.chart-wrapper');
     const chartEmpty = document.getElementById('chartEmptyState');
@@ -161,6 +161,7 @@ function loadDashboardData() {
     .catch(err => console.error(err));
 }
 
+// --- History ---
 function loadHistoryData() {
     fetch(API_URL, {
         method: 'POST',
@@ -177,6 +178,7 @@ function loadHistoryData() {
     .catch(err => console.error(err));
 }
 
+// --- Medical ---
 function loadMedicalData() {
     fetch(API_URL, {
         method: 'POST',
@@ -192,6 +194,187 @@ function loadMedicalData() {
     .catch(err => console.error(err));
 }
 
+// --- 渲染就醫列表 ---
+function renderMedicalList(records) {
+    const listContainer = document.getElementById('medicalList');
+    const emptyState = document.getElementById('medicalEmptyState');
+    
+    if (!listContainer || !emptyState) return;
+
+    listContainer.innerHTML = '';
+
+    if (!records || records.length === 0) {
+        listContainer.style.display = 'none';
+        emptyState.style.display = 'block';
+    } else {
+        listContainer.style.display = 'block';
+        emptyState.style.display = 'none';
+
+        records.forEach(record => {
+            // ★ 使用 parseDate 處理日期
+            const timestamp = parseDate(record.check_date);
+            let displayDate = new Date(timestamp).toISOString().split('T')[0];
+            
+            const linkHtml = record.report_image_url ? 
+                `<button class="btn-view" onclick="openModal('${record.report_image_url}')">
+                    <span>📄</span> 查看報告
+                 </button>` : '';
+
+            const li = document.createElement('li');
+            li.className = 'record-item';
+            li.innerHTML = `
+                <div class="record-left">
+                    <span style="font-size: 1.1rem; font-weight: bold; color: var(--color-text);">${displayDate} 回診</span>
+                </div>
+                <div class="record-actions">
+                    ${linkHtml}
+                    <button class="btn-icon btn-delete" onclick="deleteMedicalRecord('${record.id}')" title="刪除">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
+            `;
+            listContainer.appendChild(li);
+        });
+    }
+}
+
+// --- 圖片彈窗邏輯 ---
+function openModal(imageUrl) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    const loadingText = document.getElementById('modalLoading');
+
+    modal.style.display = "block";
+    modalImg.style.display = "none";
+    loadingText.style.display = "block"; 
+    loadingText.innerText = "圖片載入中...";
+
+    modalImg.src = imageUrl;
+
+    modalImg.onload = function() {
+        loadingText.style.display = "none";
+        modalImg.style.display = "block";
+    };
+    modalImg.onerror = function() {
+        console.warn("圖片載入失敗，嘗試直接開啟連結");
+        loadingText.innerHTML = `
+            圖片預覽失敗 😢<br>
+            <a href="${imageUrl}" target="_blank" style="color:var(--color-primary);text-decoration:underline;font-weight:bold;margin-top:10px;display:inline-block;">
+                點此直接前往 Google Drive 查看
+            </a>
+        `;
+    };
+}
+
+// --- 圖表 (已修正空白問題) ---
+function updateChart(days) {
+    const ctx = document.getElementById('bpChart');
+    if (!ctx) return;
+
+    const today = new Date();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(today.getDate() - days);
+
+    const dailyData = new Map();
+    // ★ 使用 parseDate 進行排序
+    const sortedRecords = [...globalRecords].sort((a, b) => parseDate(a.date) - parseDate(b.date));
+
+    sortedRecords.forEach(r => {
+        // ★ 使用 parseDate 處理日期
+        const timestamp = parseDate(r.date);
+        
+        // 確保日期有效
+        if (isNaN(timestamp)) return;
+
+        const rDateObj = new Date(timestamp);
+        const dateKey = rDateObj.toISOString().split('T')[0];
+        
+        if (rDateObj >= cutoffDate && rDateObj <= today) {
+            let sbp = Number(r.sbp_1);
+            let dbp = Number(r.dbp_1);
+            let pulse = Number(r.pulse_1);
+            let count = 1;
+
+            if (r.sbp_2 && Number(r.sbp_2) > 0) {
+                sbp += Number(r.sbp_2);
+                dbp += Number(r.dbp_2);
+                pulse += Number(r.pulse_2);
+                count++;
+            }
+
+            if (!dailyData.has(dateKey)) {
+                dailyData.set(dateKey, { s: [], d: [], p: [] });
+            }
+            dailyData.get(dateKey).s.push(sbp / count);
+            dailyData.get(dateKey).d.push(dbp / count);
+            dailyData.get(dateKey).p.push(pulse / count);
+        }
+    });
+
+    const labels = [];
+    const dataSbp = [];
+    const dataDbp = [];
+    const dataPulse = [];
+
+    dailyData.forEach((vals, date) => {
+        labels.push(date.slice(5)); 
+        dataSbp.push(Math.round(vals.s.reduce((a,b)=>a+b)/vals.s.length));
+        dataDbp.push(Math.round(vals.d.reduce((a,b)=>a+b)/vals.d.length));
+        dataPulse.push(Math.round(vals.p.reduce((a,b)=>a+b)/vals.p.length));
+    });
+
+    if (myChart) { myChart.destroy(); }
+
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '收縮壓',
+                    data: dataSbp,
+                    borderColor: '#2196F3',
+                    backgroundColor: '#2196F3',
+                    pointStyle: 'rectRounded',
+                    pointRadius: 6,
+                    tension: 0.3
+                },
+                {
+                    label: '舒張壓',
+                    data: dataDbp,
+                    borderColor: '#7E57C2',
+                    backgroundColor: '#7E57C2',
+                    pointStyle: 'rectRounded',
+                    pointRadius: 6,
+                    tension: 0.3
+                },
+                {
+                    label: '心率',
+                    data: dataPulse,
+                    borderColor: '#E91E63',
+                    backgroundColor: '#E91E63',
+                    pointStyle: 'circle',
+                    pointRadius: 5,
+                    borderDash: [5, 5],
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, font: { size: 16 } } }
+            },
+            scales: {
+                y: { beginAtZero: false, suggestedMin: 50, suggestedMax: 150, ticks: { font: { size: 14 } } },
+                x: { ticks: { font: { size: 14 } } }
+            }
+        }
+    });
+}
+
+// --- 渲染 Dashboard 列表 ---
 function renderRecordList(records) {
     const listContainer = document.getElementById('recordList');
     const emptyState = document.getElementById('emptyState');
@@ -204,14 +387,18 @@ function renderRecordList(records) {
     } else {
         listContainer.style.display = 'block';
         emptyState.style.display = 'none';
-        records.slice(0, 10).forEach(record => {
+        
+        // 顯示最近 10 筆，先排序確保順序正確
+        const sorted = [...records].sort((a, b) => parseDate(b.date) - parseDate(a.date));
+        
+        sorted.slice(0, 10).forEach(record => {
             const li = createRecordListItem(record);
             listContainer.appendChild(li);
         });
     }
 }
 
-// ★★★ 修改：歷史列表 - 每 6 天計算一次平均 ★★★
+// --- 渲染 History 列表 (每 6 天統計) ---
 function renderHistoryList(records) {
     const listContainer = document.getElementById('historyList');
     const emptyState = document.getElementById('historyEmptyState');
@@ -226,42 +413,35 @@ function renderHistoryList(records) {
         emptyState.style.display = 'none';
         
         // 確保資料是依照日期由新到舊排序
-        records.sort((a, b) => Number(b.date) - Number(a.date));
+        // ★ 使用 parseDate 進行排序
+        records.sort((a, b) => parseDate(b.date) - parseDate(a.date));
 
-        let anchorDate = null; // 當前批次的基準日期 (最新的那天)
+        let anchorDate = null; 
         let batchSbp = 0, batchDbp = 0, batchCount = 0;
 
         records.forEach(record => {
-            const currentTimestamp = Number(record.date);
+            // ★ 使用 parseDate 處理
+            const currentTimestamp = parseDate(record.date);
             const currentDate = new Date(currentTimestamp);
 
-            // 如果是第一筆，設定為錨點日期
             if (!anchorDate) anchorDate = currentDate;
 
-            // 計算與錨點日期的差距天數
-            // 忽略時分秒，只比較日期
             const d1 = new Date(anchorDate); d1.setHours(0,0,0,0);
             const d2 = new Date(currentDate); d2.setHours(0,0,0,0);
             const diffTime = Math.abs(d1 - d2);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            // 如果差距超過 6 天 (0~5 是同一組，>=6 是下一組)
-            // 這裡的邏輯是：當發現這筆資料「太舊了」，就先結算「上一組」的平均值
             if (diffDays >= 6) {
-                // 渲染上一組的統計區塊
                 if (batchCount > 0) {
                     renderSummaryBlock(listContainer, batchSbp, batchDbp, batchCount);
                 }
-                // 重置計數器，準備開始新的一組
                 anchorDate = currentDate;
                 batchSbp = 0; batchDbp = 0; batchCount = 0;
             }
 
-            // 渲染當前紀錄
             const li = createRecordListItem(record);
             listContainer.appendChild(li);
 
-            // 累加數值 (處理單筆紀錄內可能有兩次測量)
             let sbp = Number(record.sbp_1);
             let dbp = Number(record.dbp_1);
             let count = 1;
@@ -275,20 +455,41 @@ function renderHistoryList(records) {
             batchCount++;
         });
 
-        // 迴圈結束後，如果還有未結算的資料 (最後一組)，要補上統計
         if (batchCount > 0) {
             renderSummaryBlock(listContainer, batchSbp, batchDbp, batchCount);
         }
     }
 }
 
+// --- 輔助函式：渲染統計區塊 ---
+function renderSummaryBlock(container, sbpSum, dbpSum, count) {
+    if (count === 0) return;
+    const finalAvgSbp = Math.round(sbpSum / count);
+    const finalAvgDbp = Math.round(dbpSum / count);
+
+    const div = document.createElement('li');
+    div.className = 'average-summary-block';
+    div.innerHTML = `
+        <span class="average-summary-icon">💡</span>
+        <div>
+            前 6 天的血壓平均值為：<br>
+            收縮壓/舒張壓 <span style="color:#d32f2f; font-size:1.2rem;">${finalAvgSbp}</span> / <span style="color:#d32f2f; font-size:1.2rem;">${finalAvgDbp}</span> mmHg
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+// --- 建立列表項目 ---
 function createRecordListItem(record) {
     const sbp = record.sbp_1;
     const dbp = record.dbp_1;
     let statusClass = determineBpStatus(sbp, dbp);
-    const timestamp = Number(record.date);
+    
+    // ★ 使用 parseDate 處理
+    const timestamp = parseDate(record.date);
     let displayDate = new Date(timestamp).toISOString().split('T')[0];
     const timeLabel = record.time_slot === 'morning' ? '早上' : '晚上';
+
     const li = document.createElement('li');
     li.className = 'record-item';
     li.innerHTML = `
@@ -311,9 +512,12 @@ window.editRecord = function(recordId) {
     document.getElementById('recordFormTitle').innerText = "編輯紀錄";
     document.getElementById('saveRecordBtn').innerText = "儲存修改 ✓";
     document.getElementById('recordId').value = record.id;
-    const timestamp = Number(record.date);
+    
+    // ★ 使用 parseDate 處理
+    const timestamp = parseDate(record.date);
     let displayDate = new Date(timestamp).toISOString().split('T')[0];
     document.getElementById('recordDate').value = displayDate;
+    
     const timeBtns = document.querySelectorAll('.time-btn');
     timeBtns.forEach(btn => btn.classList.remove('selected'));
     if (record.time_slot === 'morning') timeBtns[0].classList.add('selected');
@@ -371,6 +575,7 @@ window.addEventListener('load', () => {
     const hash = window.location.hash.substring(1);
     if(hash) { navigateTo(hash); } else { navigateTo('hero'); }
 
+    // 使用 getTodayString 設定預設日期
     const dateInput = document.getElementById('recordDate');
     if(dateInput) dateInput.value = getTodayString();
 
@@ -455,7 +660,10 @@ window.addEventListener('load', () => {
             e.preventDefault();
             const recordId = document.getElementById('recordId').value;
             const dateStr = document.getElementById('recordDate').value;
+            
+            // ★ 使用 parseDate (或直接 new Date 轉 timestamp) 統一上傳格式
             const timestamp = new Date(dateStr).getTime();
+
             const timeSlotBtn = document.querySelector('.time-btn.selected');
             const timeSlotText = timeSlotBtn ? timeSlotBtn.innerText : '早上';
             const timeSlot = timeSlotText.includes('晚') ? 'evening' : 'morning';
