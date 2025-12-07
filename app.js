@@ -20,7 +20,7 @@ function getCurrentMonthString() {
     return `${year}-${month}`;
 }
 
-// --- 輔助函式：統一處理日期格式 (關鍵修復) ---
+// --- 輔助函式：統一處理日期格式 (★ 關鍵修復) ---
 function parseDate(val) {
     if (!val) return new Date().getTime();
     // 如果已經是數字，直接回傳
@@ -171,7 +171,7 @@ function loadDashboardData() {
             if (globalRecords.length > 0) {
                 canvas.style.display = 'block';
                 if(chartEmpty) chartEmpty.style.display = 'none';
-                updateChart(7); // 預設顯示 7 天
+                updateChart(7);
             } else {
                 canvas.style.display = 'none';
                 if(chartEmpty) chartEmpty.style.display = 'block';
@@ -181,7 +181,6 @@ function loadDashboardData() {
     .catch(err => console.error(err));
 }
 
-// --- History: 載入並初始化月份篩選 ---
 function loadHistoryData() {
     fetch(API_URL, {
         method: 'POST',
@@ -193,7 +192,6 @@ function loadHistoryData() {
         if (response.success) {
             globalRecords = response.data;
             
-            // 初始化年/月選單
             const yearSelect = document.getElementById('historyYear');
             const monthSelect = document.getElementById('historyMonth');
             const now = new Date();
@@ -226,7 +224,6 @@ function loadHistoryData() {
     .catch(err => console.error(err));
 }
 
-// --- History: 篩選邏輯 ---
 function filterAndRenderHistory() {
     const yearSelect = document.getElementById('historyYear');
     const monthSelect = document.getElementById('historyMonth');
@@ -244,7 +241,6 @@ function filterAndRenderHistory() {
     renderHistoryList(filteredRecords);
 }
 
-// --- Medical ---
 function loadMedicalData() {
     fetch(API_URL, {
         method: 'POST',
@@ -273,7 +269,7 @@ function renderRecordList(records) {
         listContainer.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // ★ 修正：使用 parseDate 進行排序
+        // ★ 修正：使用 parseDate 排序
         const sorted = [...records].sort((a, b) => parseDate(b.date) - parseDate(a.date));
         
         sorted.slice(0, 10).forEach(record => {
@@ -283,7 +279,6 @@ function renderRecordList(records) {
     }
 }
 
-// --- History 列表渲染 (每 6 天統計) ---
 function renderHistoryList(records) {
     const listContainer = document.getElementById('historyList');
     const emptyState = document.getElementById('historyEmptyState');
@@ -297,14 +292,13 @@ function renderHistoryList(records) {
         listContainer.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // ★ 修正：使用 parseDate 進行排序
+        // ★ 修正：使用 parseDate 排序
         records.sort((a, b) => parseDate(b.date) - parseDate(a.date));
 
         let anchorDate = null; 
         let batchSbp = 0, batchDbp = 0, batchCount = 0;
 
         records.forEach(record => {
-            // ★ 修正：使用 parseDate
             const currentTimestamp = parseDate(record.date);
             const currentDate = new Date(currentTimestamp);
 
@@ -345,7 +339,6 @@ function renderHistoryList(records) {
     }
 }
 
-// --- 渲染 Medical 列表 ---
 function renderMedicalList(records) {
     const listContainer = document.getElementById('medicalList');
     const emptyState = document.getElementById('medicalEmptyState');
@@ -362,20 +355,19 @@ function renderMedicalList(records) {
         emptyState.style.display = 'none';
 
         records.forEach(record => {
-            // ★ 修正：使用 parseDate
             const timestamp = parseDate(record.check_date);
             let displayDate = new Date(timestamp).toISOString().split('T')[0];
             
             const linkHtml = record.report_image_url ? 
                 `<button class="btn-view" onclick="openModal('${record.report_image_url}')">
-                    <span>📄</span> 查看報告
+                    <span>📄</span> 查看
                  </button>` : '';
 
             const li = document.createElement('li');
             li.className = 'record-item';
             li.innerHTML = `
                 <div class="record-left">
-                    <span style="font-size: 1.1rem; font-weight: bold; color: var(--color-text);">${displayDate} 回診</span>
+                    <span style="font-size: 1.1rem; font-weight: bold; color: var(--color-text);">${displayDate}</span>
                 </div>
                 <div class="record-actions">
                     ${linkHtml}
@@ -416,7 +408,7 @@ function openModal(imageUrl) {
     };
 }
 
-// --- 圖表 (修正空白問題) ---
+// --- ★★★ 關鍵圖表修正 ★★★ ---
 function updateChart(days) {
     const ctx = document.getElementById('bpChart');
     if (!ctx) return;
@@ -427,14 +419,14 @@ function updateChart(days) {
 
     const dailyData = new Map();
     
-    // ★ 修正：使用 parseDate 進行排序
+    // ★ 關鍵：使用 parseDate 進行排序
     const sortedRecords = [...globalRecords].sort((a, b) => parseDate(a.date) - parseDate(b.date));
 
     sortedRecords.forEach(r => {
-        // ★ 修正：使用 parseDate 解析日期
+        // ★ 關鍵：使用 parseDate 取得正確的時間戳記
         const timestamp = parseDate(r.date);
         
-        // 確保日期有效
+        // 確保日期有效，如果是 NaN 則跳過
         if (isNaN(timestamp)) return;
 
         const rDateObj = new Date(timestamp);
@@ -530,7 +522,6 @@ function createRecordListItem(record) {
     const dbp = record.dbp_1;
     let statusClass = determineBpStatus(sbp, dbp);
     
-    // ★ 修正：使用 parseDate
     const timestamp = parseDate(record.date);
     let displayDate = new Date(timestamp).toISOString().split('T')[0];
     const timeLabel = record.time_slot === 'morning' ? '早上' : '晚上';
@@ -558,7 +549,6 @@ window.editRecord = function(recordId) {
     document.getElementById('saveRecordBtn').innerText = "儲存修改 ✓";
     document.getElementById('recordId').value = record.id;
     
-    // ★ 修正：使用 parseDate
     const timestamp = parseDate(record.date);
     let displayDate = new Date(timestamp).toISOString().split('T')[0];
     document.getElementById('recordDate').value = displayDate;
@@ -626,7 +616,6 @@ window.addEventListener('load', () => {
     const medicalDateInput = document.getElementById('medicalDate');
     if(medicalDateInput) medicalDateInput.value = getTodayString();
 
-    // History 年/月選擇器監聽器
     const yearSelect = document.getElementById('historyYear');
     const monthSelect = document.getElementById('historyMonth');
     
@@ -716,7 +705,6 @@ window.addEventListener('load', () => {
             const recordId = document.getElementById('recordId').value;
             const dateStr = document.getElementById('recordDate').value;
             
-            // ★ 修正：使用 parseDate (或 new Date 轉 timestamp)
             const timestamp = new Date(dateStr).getTime();
 
             const timeSlotBtn = document.querySelector('.time-btn.selected');
