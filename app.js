@@ -20,18 +20,15 @@ function getCurrentMonthString() {
     return `${year}-${month}`;
 }
 
-// --- 輔助函式：統一處理日期格式 (★ 關鍵修復) ---
+// --- 輔助函式：統一處理日期格式 ---
 function parseDate(val) {
     if (!val) return new Date().getTime();
-    // 如果已經是數字，直接回傳
     if (typeof val === 'number') return val;
-    // 如果是字串但長得像數字 (例如 "1765152000000")，轉成數字
     if (!isNaN(val) && !isNaN(parseFloat(val))) return Number(val);
-    // 如果是日期字串 (例如 "2025-12-08")，轉成時間戳記
     return new Date(val).getTime();
 }
 
-// --- 輔助函式：判斷血壓狀態 ---
+// --- 輔助函式：判斷血壓狀態 (決定圓點顏色) ---
 function determineBpStatus(sbp, dbp) {
     const s = Number(sbp);
     const d = Number(dbp);
@@ -48,18 +45,33 @@ function determineBpStatus(sbp, dbp) {
 }
 
 // --- 輔助函式：渲染統計區塊 ---
-function renderSummaryBlock(container, sbpSum, dbpSum, count) {
+function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     if (count === 0) return;
     const finalAvgSbp = Math.round(sbpSum / count);
     const finalAvgDbp = Math.round(dbpSum / count);
+    const finalAvgPulse = Math.round(pulseSum / count);
 
     const div = document.createElement('li');
     div.className = 'average-summary-block';
+    
     div.innerHTML = `
-        <span class="average-summary-icon">💡</span>
-        <div>
-            前 6 天的血壓平均值為：<br>
-            收縮壓/舒張壓 <span style="color:#d32f2f; font-size:1.2rem;">${finalAvgSbp}</span> / <span style="color:#d32f2f; font-size:1.2rem;">${finalAvgDbp}</span> mmHg
+        <div style="flex: 1;">
+            <div style="margin-bottom: 5px;">
+                <span class="average-summary-icon">💡</span>
+                前 6 天平均值：
+            </div>
+            <div class="summary-data-row">
+                <div>
+                    <span style="font-size: 0.95rem; color: #5D4037;">血壓</span> 
+                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;">${finalAvgSbp}/${finalAvgDbp}</span> 
+                    <span style="font-size: 0.8rem; color: #8A9C94;">mmHg</span>
+                </div>
+                <div>
+                    <span style="font-size: 0.95rem; color: #5D4037;">脈搏</span> 
+                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;">${finalAvgPulse}</span> 
+                    <span style="font-size: 0.8rem; color: #8A9C94;">bpm</span>
+                </div>
+            </div>
         </div>
     `;
     container.appendChild(div);
@@ -269,7 +281,6 @@ function renderRecordList(records) {
         listContainer.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // ★ 修正：使用 parseDate 排序
         const sorted = [...records].sort((a, b) => parseDate(b.date) - parseDate(a.date));
         
         sorted.slice(0, 10).forEach(record => {
@@ -279,6 +290,7 @@ function renderRecordList(records) {
     }
 }
 
+// --- History 列表渲染 (每 6 天統計) ---
 function renderHistoryList(records) {
     const listContainer = document.getElementById('historyList');
     const emptyState = document.getElementById('historyEmptyState');
@@ -292,11 +304,10 @@ function renderHistoryList(records) {
         listContainer.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // ★ 修正：使用 parseDate 排序
         records.sort((a, b) => parseDate(b.date) - parseDate(a.date));
 
         let anchorDate = null; 
-        let batchSbp = 0, batchDbp = 0, batchCount = 0;
+        let batchSbp = 0, batchDbp = 0, batchPulse = 0, batchCount = 0;
 
         records.forEach(record => {
             const currentTimestamp = parseDate(record.date);
@@ -311,10 +322,10 @@ function renderHistoryList(records) {
 
             if (diffDays >= 6) {
                 if (batchCount > 0) {
-                    renderSummaryBlock(listContainer, batchSbp, batchDbp, batchCount);
+                    renderSummaryBlock(listContainer, batchSbp, batchDbp, batchPulse, batchCount);
                 }
                 anchorDate = currentDate;
-                batchSbp = 0; batchDbp = 0; batchCount = 0;
+                batchSbp = 0; batchDbp = 0; batchPulse = 0; batchCount = 0;
             }
 
             const li = createRecordListItem(record);
@@ -322,19 +333,22 @@ function renderHistoryList(records) {
 
             let sbp = Number(record.sbp_1);
             let dbp = Number(record.dbp_1);
+            let pulse = Number(record.pulse_1);
             let count = 1;
             if (record.sbp_2 && Number(record.sbp_2) > 0) {
                 sbp += Number(record.sbp_2);
                 dbp += Number(record.dbp_2);
+                pulse += Number(record.pulse_2);
                 count++;
             }
             batchSbp += (sbp / count);
             batchDbp += (dbp / count);
+            batchPulse += (pulse / count);
             batchCount++;
         });
 
         if (batchCount > 0) {
-            renderSummaryBlock(listContainer, batchSbp, batchDbp, batchCount);
+            renderSummaryBlock(listContainer, batchSbp, batchDbp, batchPulse, batchCount);
         }
     }
 }
@@ -408,7 +422,6 @@ function openModal(imageUrl) {
     };
 }
 
-// --- ★★★ 關鍵圖表修正 ★★★ ---
 function updateChart(days) {
     const ctx = document.getElementById('bpChart');
     if (!ctx) return;
@@ -418,15 +431,10 @@ function updateChart(days) {
     cutoffDate.setDate(today.getDate() - days);
 
     const dailyData = new Map();
-    
-    // ★ 關鍵：使用 parseDate 進行排序
     const sortedRecords = [...globalRecords].sort((a, b) => parseDate(a.date) - parseDate(b.date));
 
     sortedRecords.forEach(r => {
-        // ★ 關鍵：使用 parseDate 取得正確的時間戳記
         const timestamp = parseDate(r.date);
-        
-        // 確保日期有效，如果是 NaN 則跳過
         if (isNaN(timestamp)) return;
 
         const rDateObj = new Date(timestamp);
@@ -468,6 +476,9 @@ function updateChart(days) {
 
     if (myChart) { myChart.destroy(); }
 
+    // 需求 4：檢測視窗寬度
+    const isMobile = window.innerWidth <= 420;
+
     myChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -492,8 +503,9 @@ function updateChart(days) {
                     tension: 0.3
                 },
                 {
-                    label: '心率',
+                    label: '脈搏',
                     data: dataPulse,
+                    // 需求 1：圖表內的脈搏顏色使用桃紅色 (#E91E63)
                     borderColor: '#E91E63',
                     backgroundColor: '#E91E63',
                     pointStyle: 'circle',
@@ -507,7 +519,14 @@ function updateChart(days) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top', labels: { usePointStyle: true, font: { size: 16 } } }
+                legend: { 
+                    position: 'top', 
+                    labels: { 
+                        usePointStyle: true, 
+                        // 需求 4：在小螢幕時縮小字體以避免斷行
+                        font: { size: isMobile ? 12 : 16 } 
+                    } 
+                }
             },
             scales: {
                 y: { beginAtZero: false, suggestedMin: 50, suggestedMax: 150, ticks: { font: { size: 14 } } },
@@ -517,9 +536,11 @@ function updateChart(days) {
     });
 }
 
+// --- 紀錄列表單項 ---
 function createRecordListItem(record) {
     const sbp = record.sbp_1;
     const dbp = record.dbp_1;
+    const pulse = record.pulse_1; 
     let statusClass = determineBpStatus(sbp, dbp);
     
     const timestamp = parseDate(record.date);
@@ -531,7 +552,13 @@ function createRecordListItem(record) {
     li.innerHTML = `
         <div class="record-left">
             <div class="record-date"><span class="status-light ${statusClass}"></span>${displayDate} ${timeLabel}</div>
-            <div class="record-values">${sbp} / ${dbp} <span class="record-unit">mmHg</span></div>
+            <div class="record-values">
+                ${sbp} / ${dbp} <span class="record-unit">mmHg</span>
+                <span class="text-purple">
+                    ❤ ${pulse}
+                </span>
+                <span class="record-unit">bpm</span>
+            </div>
         </div>
         <div class="record-actions">
             <button class="btn-icon btn-edit" onclick="editRecord('${record.id}')" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
