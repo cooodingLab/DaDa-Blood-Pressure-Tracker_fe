@@ -619,7 +619,7 @@ window.deleteRecord = function(recordId) {
 }
 
 window.deleteMedicalRecord = function(recordId) {
-    showConfirm('確定要刪除就醫紀錄嗎？', '刪除後無法復原喔！', () => {
+    showConfirm('確定要刪除回診紀錄嗎？', '刪除後無法復原喔！', () => {
         fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -628,7 +628,7 @@ window.deleteMedicalRecord = function(recordId) {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                showToast('success', '已刪除就醫紀錄！');
+                showToast('success', '已刪除回診紀錄！');
                 loadMedicalData();
             } else {
                 Swal.fire('錯誤', data.message, 'error');
@@ -806,7 +806,7 @@ window.addEventListener('load', () => {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        showToast('success', '就醫紀錄已儲存！');
+                        showToast('success', '回診紀錄已儲存！');
                         loadMedicalData();
                         const fileNameDisplay = document.getElementById('fileNameDisplay');
                         if(fileNameDisplay) { fileNameDisplay.style.display = 'none'; fileNameDisplay.textContent = ''; }
