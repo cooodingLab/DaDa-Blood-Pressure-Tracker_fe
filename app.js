@@ -55,7 +55,7 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     div.className = 'average-summary-block';
     
     // 使用 val-group 避免跑版，使用 text-purple 保持列表紫色
-    // 修正：在數字前後加上空格
+    // 數字前後保留空格以利閱讀
     div.innerHTML = `
         <div style="flex: 1;">
             <div style="margin-bottom: 5px;">
@@ -538,11 +538,21 @@ function updateChart(days) {
     });
 }
 
-// --- 紀錄列表單項 ---
+// --- ★★★ 修改：紀錄列表單項 (改為顯示平均值) ★★★ ---
 function createRecordListItem(record) {
-    const sbp = record.sbp_1;
-    const dbp = record.dbp_1;
-    const pulse = record.pulse_1; 
+    let sbp = Number(record.sbp_1);
+    let dbp = Number(record.dbp_1);
+    let pulse = Number(record.pulse_1);
+
+    // ★★★ 自動計算平均值邏輯 ★★★
+    // 檢查是否有第二次測量，且數值大於 0
+    if (record.sbp_2 && Number(record.sbp_2) > 0) {
+        sbp = Math.round((sbp + Number(record.sbp_2)) / 2);
+        dbp = Math.round((dbp + Number(record.dbp_2)) / 2);
+        pulse = Math.round((pulse + Number(record.pulse_2)) / 2);
+    }
+
+    // 根據平均值決定燈號顏色
     let statusClass = determineBpStatus(sbp, dbp);
     
     const timestamp = parseDate(record.date);
@@ -620,7 +630,7 @@ window.deleteRecord = function(recordId) {
 }
 
 window.deleteMedicalRecord = function(recordId) {
-    showConfirm('確定要刪除回診紀錄嗎？', '刪除後無法復原喔！', () => {
+    showConfirm('確定要刪除就醫紀錄嗎？', '刪除後無法復原喔！', () => {
         fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -629,7 +639,7 @@ window.deleteMedicalRecord = function(recordId) {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                showToast('success', '已刪除回診紀錄！');
+                showToast('success', '已刪除就醫紀錄！');
                 loadMedicalData();
             } else {
                 Swal.fire('錯誤', data.message, 'error');
