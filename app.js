@@ -55,6 +55,7 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     div.className = 'average-summary-block';
     
     // 使用 val-group 避免跑版，使用 text-purple 保持列表紫色
+    // 修正：在數字前後加上空格
     div.innerHTML = `
         <div style="flex: 1;">
             <div style="margin-bottom: 5px;">
@@ -64,12 +65,12 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
             <div class="summary-data-row">
                 <div class="val-group">
                     <span style="font-size: 0.95rem; color: #5D4037;">血壓</span> 
-                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;">${finalAvgSbp}/${finalAvgDbp}</span> 
+                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;"> ${finalAvgSbp}/${finalAvgDbp} </span> 
                     <span style="font-size: 0.8rem; color: #8A9C94;">mmHg</span>
                 </div>
                 <div class="val-group">
                     <span style="font-size: 0.95rem; color: #5D4037;">脈搏</span> 
-                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;">${finalAvgPulse}</span> 
+                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;"> ${finalAvgPulse} </span> 
                     <span style="font-size: 0.8rem; color: #8A9C94;">bpm</span>
                 </div>
             </div>
