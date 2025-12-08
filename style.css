@@ -23,8 +23,10 @@
   --border-radius-btn: 50px;
   /* 藍色變數 */
   --color-blue: #2196F3;
-  /* 需求 2：紀錄列表改回協調的紫色 (Coordinated Purple) */
+  /* 紫色變數 (Coordinated Purple) */
   --color-purple: #7D53A2;
+  /* 桃紅色變數 (Pink - 用於圖表) */
+  --color-pink: #E91E63;
 }
 
 /* 基礎設定 */
@@ -80,14 +82,20 @@ h3 { font-size: 1.4rem; color: var(--color-text); margin-top: 30px;}
     align-items: center; 
 }
 
-/* 需求 2：列表內的脈搏顏色改成紫色 (Text Purple) */
+/* ★★★ 新增：數值群組類別，強制不換行，解決跑版問題 ★★★ */
+.val-group {
+    white-space: nowrap; 
+    display: inline-flex;
+    align-items: baseline;
+}
+
+/* 列表內的脈搏顏色使用紫色 */
 .text-purple {
     color: var(--color-purple);
-    margin-left: 8px;
+    margin-left: 0; /* 配合 val-group 調整 */
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    /* 繼承父層 .record-values 的 font-size */
 }
 
 .record-unit { font-size: 0.8rem; color: var(--color-text-light); font-weight: normal; margin-left: 2px; }
@@ -236,6 +244,12 @@ input[type="date"], input[type="month"] { display: block; width: 100%; min-heigh
       flex-direction: column;
       align-items: stretch;
       gap: 12px;
+  }
+  
+  /* 數值區域：允許換行但保持間距 */
+  .record-values {
+      flex-wrap: wrap; 
+      gap: 5px;
   }
   
   .record-actions {
