@@ -3,17 +3,16 @@
 let globalRecords = [];
 let myChart = null;
 
-// --- API 請求封裝函式 (核心修改) ---
+// --- API 請求封裝函式 ---
 async function callApi(payload) {
-    // 除了 login 動作外，其他都必須帶上 apiSecret
     if (payload.action !== 'login') {
         const secret = localStorage.getItem('dada_api_secret');
         if (!secret) {
-            handleLogout(); // 沒 Token 直接登出
+            handleLogout();
             return { success: false, message: '請先登入' };
         }
         payload.apiSecret = secret;
-        payload.userId = CONFIG.DEFAULT_USER_ID; // 統一補上 UserId
+        payload.userId = CONFIG.DEFAULT_USER_ID; 
     }
 
     try {
@@ -24,7 +23,6 @@ async function callApi(payload) {
         });
         const result = await response.json();
 
-        // 如果後端回傳權限不足，強制登出
         if (!result.success && result.message.includes('權限')) {
             handleLogout();
         }
@@ -35,7 +33,7 @@ async function callApi(payload) {
     }
 }
 
-// --- 輔助函式：取得本地端今天的日期字串 (YYYY-MM-DD) ---
+// --- 輔助函式 ---
 function getTodayString() {
     const now = new Date();
     const year = now.getFullYear();
@@ -44,7 +42,6 @@ function getTodayString() {
     return `${year}-${month}-${day}`;
 }
 
-// --- 輔助函式：取得本地端當前月份字串 (YYYY-MM) ---
 function getCurrentMonthString() {
     const now = new Date();
     const year = now.getFullYear();
@@ -52,7 +49,6 @@ function getCurrentMonthString() {
     return `${year}-${month}`;
 }
 
-// --- 輔助函式：統一處理日期格式 ---
 function parseDate(val) {
     if (!val) return new Date().getTime();
     if (typeof val === 'number') return val;
@@ -60,23 +56,16 @@ function parseDate(val) {
     return new Date(val).getTime();
 }
 
-// --- 輔助函式：判斷血壓狀態 (決定圓點顏色) ---
 function determineBpStatus(sbp, dbp) {
     const s = Number(sbp);
     const d = Number(dbp);
 
-    if (s >= 140 || d >= 90) {
-        return 'status-stage2'; 
-    } else if ((s >= 130 && s <= 139) || (d >= 80 && d <= 89)) {
-        return 'status-stage1'; 
-    } else if ((s >= 120 && s <= 129) && d < 80) {
-        return 'status-elevated'; 
-    } else {
-        return 'status-normal'; 
-    }
+    if (s >= 140 || d >= 90) return 'status-stage2'; 
+    if ((s >= 130 && s <= 139) || (d >= 80 && d <= 89)) return 'status-stage1'; 
+    if ((s >= 120 && s <= 129) && d < 80) return 'status-elevated'; 
+    return 'status-normal'; 
 }
 
-// --- 輔助函式：渲染統計區塊 ---
 function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     if (count === 0) return;
     const finalAvgSbp = Math.round(sbpSum / count);
@@ -86,8 +75,6 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     const div = document.createElement('li');
     div.className = 'average-summary-block';
     
-    // 使用 val-group 避免跑版，使用 text-purple 保持列表紫色
-    // 修改：移除手動空格，由 CSS .val-group > span:nth-child(2) 控制 margin
     div.innerHTML = `
         <div style="flex: 1;">
             <div style="margin-bottom: 5px;">
@@ -97,12 +84,12 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
             <div class="summary-data-row">
                 <div class="val-group">
                     <span style="font-size: 0.95rem; color: #5D4037;">血壓</span> 
-                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;">${finalAvgSbp}/${finalAvgDbp}</span> 
+                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;"> ${finalAvgSbp}/${finalAvgDbp} </span> 
                     <span style="font-size: 0.8rem; color: #8A9C94;">mmHg</span>
                 </div>
                 <div class="val-group">
                     <span style="font-size: 0.95rem; color: #5D4037;">脈搏</span> 
-                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;">${finalAvgPulse}</span> 
+                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;"> ${finalAvgPulse} </span> 
                     <span style="font-size: 0.8rem; color: #8A9C94;">bpm</span>
                 </div>
             </div>
@@ -145,7 +132,6 @@ function showConfirm(title, text, confirmCallback) {
     });
 }
 
-// --- 路由 ---
 function navigateTo(sectionId) {
     document.querySelectorAll('.section').forEach(el => {
         el.classList.remove('active');
@@ -163,12 +149,11 @@ function navigateTo(sectionId) {
     const navLinksContainer = document.querySelector('.nav-links');
     const hamburger = document.getElementById('hamburger');
     
-    // ★★★ 關鍵修改：JS 負責將 inline 的 display: none 移除或設為 none ★★★
     if (sectionId === 'hero' || sectionId === 'login') {
         if(navLinksContainer) navLinksContainer.style.display = 'none';
         if(hamburger) hamburger.style.display = 'none';
     } else {
-        if(navLinksContainer) navLinksContainer.style.display = ''; // 清空 inline style，讓 CSS 的 display: flex 生效
+        if(navLinksContainer) navLinksContainer.style.display = ''; 
         if(hamburger) hamburger.style.display = '';
     }
 
@@ -187,7 +172,6 @@ function navigateTo(sectionId) {
     else if (sectionId === 'medicalRecord') loadMedicalData();
 }
 
-// --- 登入邏輯修改 ---
 async function handleLogin(username, password) {
     const submitBtn = document.querySelector('#loginForm button');
     submitBtn.innerText = "驗證中...";
@@ -200,9 +184,7 @@ async function handleLogin(username, password) {
     });
 
     if (result.success) {
-        // ★ 關鍵：將後端回傳的 Secret 存起來
         localStorage.setItem('dada_api_secret', result.apiSecret);
-        
         Swal.fire({
             icon: 'success',
             title: '登入成功',
@@ -215,14 +197,12 @@ async function handleLogin(username, password) {
     } else {
         Swal.fire('登入失敗', result.message, 'error');
     }
-    
     submitBtn.innerText = "解鎖我的健康紀錄"; 
     submitBtn.disabled = false;
 }
 
-// --- 登出邏輯 ---
 function handleLogout() {
-    localStorage.removeItem('dada_api_secret'); // 清除 Secret
+    localStorage.removeItem('dada_api_secret');
     Swal.fire({
         title: '已登出',
         text: '期待下次再見！',
@@ -234,13 +214,11 @@ function handleLogout() {
     });
 }
 
-// --- 修改後的 loadDashboardData ---
 async function loadDashboardData() {
     const chartWrapper = document.querySelector('.chart-wrapper');
     const chartEmpty = document.getElementById('chartEmptyState');
     const canvas = document.getElementById('bpChart');
 
-    // 改用 callApi，不用自己組 fetch
     const response = await callApi({ action: 'getBloodRecords' });
 
     if (response.success) {
@@ -258,12 +236,10 @@ async function loadDashboardData() {
     }
 }
 
-// --- 修改後的 loadHistoryData ---
 async function loadHistoryData() {
     const response = await callApi({ action: 'getBloodRecords' });
     if (response.success) {
         globalRecords = response.data;
-        
         const yearSelect = document.getElementById('historyYear');
         const monthSelect = document.getElementById('historyMonth');
         const now = new Date();
@@ -289,7 +265,6 @@ async function loadHistoryData() {
             }
             monthSelect.value = currentMonth;
         }
-        
         filterAndRenderHistory();
     }
 }
@@ -300,18 +275,15 @@ function filterAndRenderHistory() {
     if (!yearSelect || !monthSelect) return;
     
     const selectedMonth = `${yearSelect.value}-${monthSelect.value}`;
-    
     const filteredRecords = globalRecords.filter(record => {
         const timestamp = parseDate(record.date);
         const recordDate = new Date(timestamp);
         const recordMonth = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
         return recordMonth === selectedMonth;
     });
-
     renderHistoryList(filteredRecords);
 }
 
-// --- 修改後的 loadMedicalData ---
 async function loadMedicalData() {
     const response = await callApi({ action: 'getMedicalRecords' });
     if (response.success) {
@@ -333,7 +305,6 @@ function renderRecordList(records) {
         emptyState.style.display = 'none';
         
         const sorted = [...records].sort((a, b) => parseDate(b.date) - parseDate(a.date));
-        
         sorted.slice(0, 10).forEach(record => {
             const li = createRecordListItem(record);
             listContainer.appendChild(li);
@@ -341,7 +312,6 @@ function renderRecordList(records) {
     }
 }
 
-// --- History 列表渲染 (每 6 天統計) ---
 function renderHistoryList(records) {
     const listContainer = document.getElementById('historyList');
     const emptyState = document.getElementById('historyEmptyState');
@@ -407,9 +377,7 @@ function renderHistoryList(records) {
 function renderMedicalList(records) {
     const listContainer = document.getElementById('medicalList');
     const emptyState = document.getElementById('medicalEmptyState');
-    
     if (!listContainer || !emptyState) return;
-
     listContainer.innerHTML = '';
 
     if (!records || records.length === 0) {
@@ -422,11 +390,8 @@ function renderMedicalList(records) {
         records.forEach(record => {
             const timestamp = parseDate(record.check_date);
             let displayDate = new Date(timestamp).toISOString().split('T')[0];
-            
             const linkHtml = record.report_image_url ? 
-                `<button class="btn-view" onclick="openModal('${record.report_image_url}')">
-                    <span>📄</span> 查看
-                 </button>` : '';
+                `<button class="btn-view" onclick="openModal('${record.report_image_url}')"><span>📄</span> 查看</button>` : '';
 
             const li = document.createElement('li');
             li.className = 'record-item';
@@ -450,60 +415,46 @@ function openModal(imageUrl) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
     const loadingText = document.getElementById('modalLoading');
-
     modal.style.display = "block";
     modalImg.style.display = "none";
     loadingText.style.display = "block"; 
     loadingText.innerText = "圖片載入中...";
-
     modalImg.src = imageUrl;
-
     modalImg.onload = function() {
         loadingText.style.display = "none";
         modalImg.style.display = "block";
     };
     modalImg.onerror = function() {
-        console.warn("圖片載入失敗，嘗試直接開啟連結");
-        loadingText.innerHTML = `
-            圖片預覽失敗 😢<br>
-            <a href="${imageUrl}" target="_blank" style="color:var(--color-primary);text-decoration:underline;font-weight:bold;margin-top:10px;display:inline-block;">
-                點此直接前往 Google Drive 查看
-            </a>
-        `;
+        console.warn("圖片載入失敗");
+        loadingText.innerHTML = `圖片預覽失敗 😢<br><a href="${imageUrl}" target="_blank">點此查看</a>`;
     };
 }
 
 function updateChart(days) {
     const ctx = document.getElementById('bpChart');
     if (!ctx) return;
-
     const today = new Date();
     const cutoffDate = new Date();
     cutoffDate.setDate(today.getDate() - days);
-
     const dailyData = new Map();
     const sortedRecords = [...globalRecords].sort((a, b) => parseDate(a.date) - parseDate(b.date));
 
     sortedRecords.forEach(r => {
         const timestamp = parseDate(r.date);
         if (isNaN(timestamp)) return;
-
         const rDateObj = new Date(timestamp);
         const dateKey = rDateObj.toISOString().split('T')[0];
-        
         if (rDateObj >= cutoffDate && rDateObj <= today) {
             let sbp = Number(r.sbp_1);
             let dbp = Number(r.dbp_1);
             let pulse = Number(r.pulse_1);
             let count = 1;
-
             if (r.sbp_2 && Number(r.sbp_2) > 0) {
                 sbp += Number(r.sbp_2);
                 dbp += Number(r.dbp_2);
                 pulse += Number(r.pulse_2);
                 count++;
             }
-
             if (!dailyData.has(dateKey)) {
                 dailyData.set(dateKey, { s: [], d: [], p: [] });
             }
@@ -526,8 +477,6 @@ function updateChart(days) {
     });
 
     if (myChart) { myChart.destroy(); }
-
-    // 需求 4：檢測視窗寬度
     const isMobile = window.innerWidth <= 420;
 
     myChart = new Chart(ctx, {
@@ -556,7 +505,6 @@ function updateChart(days) {
                 {
                     label: '脈搏',
                     data: dataPulse,
-                    // 需求 1：圖表內的脈搏顏色維持桃紅色 (#E91E63)
                     borderColor: '#E91E63',
                     backgroundColor: '#E91E63',
                     pointStyle: 'circle',
@@ -570,14 +518,7 @@ function updateChart(days) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    position: 'top', 
-                    labels: { 
-                        usePointStyle: true, 
-                        // 需求 4：在小螢幕時縮小字體以避免斷行
-                        font: { size: isMobile ? 12 : 16 } 
-                    } 
-                }
+                legend: { position: 'top', labels: { usePointStyle: true, font: { size: isMobile ? 12 : 16 } } }
             },
             scales: {
                 y: { beginAtZero: false, suggestedMin: 50, suggestedMax: 150, ticks: { font: { size: 14 } } },
@@ -587,23 +528,16 @@ function updateChart(days) {
     });
 }
 
-// --- 紀錄列表單項 ---
 function createRecordListItem(record) {
     let sbp = Number(record.sbp_1);
     let dbp = Number(record.dbp_1);
     let pulse = Number(record.pulse_1);
-
-    // ★★★ 自動計算平均值邏輯 ★★★
-    // 檢查是否有第二次測量，且數值大於 0
     if (record.sbp_2 && Number(record.sbp_2) > 0) {
         sbp = Math.round((sbp + Number(record.sbp_2)) / 2);
         dbp = Math.round((dbp + Number(record.dbp_2)) / 2);
         pulse = Math.round((pulse + Number(record.pulse_2)) / 2);
     }
-
-    // 根據平均值決定燈號顏色
     let statusClass = determineBpStatus(sbp, dbp);
-    
     const timestamp = parseDate(record.date);
     let displayDate = new Date(timestamp).toISOString().split('T')[0];
     const timeLabel = record.time_slot === 'morning' ? '早上' : '晚上';
@@ -618,9 +552,7 @@ function createRecordListItem(record) {
                     ${sbp} / ${dbp} <span class="record-unit">mmHg</span>
                 </span>
                 <span class="val-group" style="margin-left: 8px;">
-                    <span class="text-purple">
-                        ❤ ${pulse}
-                    </span>
+                    <span class="text-purple">❤ ${pulse}</span>
                     <span class="record-unit">bpm</span>
                 </span>
             </div>
@@ -633,6 +565,7 @@ function createRecordListItem(record) {
     return li;
 }
 
+// ★★★ 編輯功能，掛載到 window ★★★
 window.editRecord = function(recordId) {
     const record = globalRecords.find(r => r.id === recordId);
     if (!record) return;
@@ -657,61 +590,45 @@ window.editRecord = function(recordId) {
     document.getElementById('pulse_2').value = record.pulse_2 || '';
 }
 
+// ★★★ 刪除功能 (修正版)，掛載到 window ★★★
 window.deleteRecord = function(recordId) {
-    showConfirm('確定要刪除紀錄嗎？', '刪除後無法復原喔！', () => {
-        fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'deleteBloodRecord', userId: 'admin-user-001', id: recordId })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', '已刪除紀錄！');
-                loadDashboardData();
-                if(document.getElementById('historyList').offsetParent !== null) loadHistoryData();
-            } else {
-                Swal.fire('錯誤', data.message, 'error');
-            }
-        })
-        .catch(err => Swal.fire('錯誤', '連線發生問題', 'error'));
+    showConfirm('確定要刪除紀錄嗎？', '刪除後無法復原喔！', async () => {
+        // 使用 callApi 發送請求，並自動帶上 Secret
+        const response = await callApi({ action: 'deleteBloodRecord', id: recordId });
+        if (response.success) {
+            showToast('success', '已刪除紀錄！');
+            loadDashboardData();
+            // 如果在歷史頁面，也刷新歷史列表
+            if(document.getElementById('historyList').offsetParent !== null) loadHistoryData();
+        } else {
+            Swal.fire('錯誤', response.message, 'error');
+        }
     });
 }
 
+// ★★★ 刪除回診紀錄功能，掛載到 window ★★★
 window.deleteMedicalRecord = function(recordId) {
-    showConfirm('確定要刪除就醫紀錄嗎？', '刪除後無法復原喔！', () => {
-        fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'deleteMedicalRecord', userId: 'admin-user-001', id: recordId })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', '已刪除就醫紀錄！');
-                loadMedicalData();
-            } else {
-                Swal.fire('錯誤', data.message, 'error');
-            }
-        })
-        .catch(err => Swal.fire('錯誤', '連線發生問題', 'error'));
+    showConfirm('確定要刪除回診紀錄嗎？', '刪除後無法復原喔！', async () => {
+        const response = await callApi({ action: 'deleteMedicalRecord', id: recordId });
+        if (response.success) {
+            showToast('success', '已刪除回診紀錄！');
+            loadMedicalData();
+        } else {
+            Swal.fire('錯誤', response.message, 'error');
+        }
     });
 }
 
-// ★★★ 關鍵修改：將事件監聽器改為 DOMContentLoaded，加快執行速度，解決 Safari 閃爍問題 ★★★
+// --- DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 檢查是否已登入 (有 Secret)
     const hasSecret = localStorage.getItem('dada_api_secret');
     const hash = window.location.hash.substring(1);
 
-    // 如果沒有 Secret 且不是在首頁或登入頁，強制導回
     if (!hasSecret && hash !== 'hero' && hash !== 'login') {
         navigateTo('hero');
     } else {
         if(hash) { navigateTo(hash); } else { navigateTo('hero'); }
     }
-
-    // ... (DOM 元素綁定邏輯不變) ...
 
     const dateInput = document.getElementById('recordDate');
     if(dateInput) dateInput.value = getTodayString();
@@ -721,13 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const yearSelect = document.getElementById('historyYear');
     const monthSelect = document.getElementById('historyMonth');
-    
-    if(yearSelect) {
-        yearSelect.addEventListener('change', filterAndRenderHistory);
-    }
-    if(monthSelect) {
-        monthSelect.addEventListener('change', filterAndRenderHistory);
-    }
+    if(yearSelect) yearSelect.addEventListener('change', filterAndRenderHistory);
+    if(monthSelect) monthSelect.addEventListener('change', filterAndRenderHistory);
 
     const rangeBtns = document.querySelectorAll('.range-btn');
     rangeBtns.forEach(btn => {
@@ -746,7 +658,6 @@ document.addEventListener('DOMContentLoaded', () => {
             navLinks.classList.toggle('active');
             hamburger.classList.toggle('active');
         });
-        
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', () => {
                 navLinks.classList.remove('active');
@@ -780,17 +691,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saveRecordBtn) {
         saveRecordBtn.addEventListener('click', async function(e) {
             e.preventDefault();
-            // ... (取得欄位值的邏輯不變)
             const recordId = document.getElementById('recordId').value;
+            const dateStr = document.getElementById('recordDate').value;
+            const timestamp = new Date(dateStr).getTime();
+            const timeSlotBtn = document.querySelector('.time-btn.selected');
+            const timeSlotText = timeSlotBtn ? timeSlotBtn.innerText : '早上';
+            const timeSlot = timeSlotText.includes('晚') ? 'evening' : 'morning';
             const sbp_1 = document.getElementById('sbp_1').value;
             const dbp_1 = document.getElementById('dbp_1').value;
             const pulse_1 = document.getElementById('pulse_1').value;
             const sbp_2 = document.getElementById('sbp_2').value;
             const dbp_2 = document.getElementById('dbp_2').value;
             const pulse_2 = document.getElementById('pulse_2').value;
-            const timeSlotBtn = document.querySelector('.time-btn.selected');
-            const timeSlotText = timeSlotBtn ? timeSlotBtn.innerText : '早上';
-            const timeSlot = timeSlotText.includes('晚') ? 'evening' : 'morning';
 
             if (!sbp_1) { Swal.fire('提示', '請至少填寫第一次測量的血壓數值！', 'warning'); return; }
             
@@ -798,11 +710,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveRecordBtn.disabled = true;
 
             const action = recordId ? 'updateBloodRecord' : 'addBloodRecord';
-            // 呼叫 callApi
             const response = await callApi({
                 action: action,
-                id: recordId, // 如果是新增，後端會忽略這個
-                date: new Date(document.getElementById('recordDate').value).getTime(),
+                id: recordId,
+                date: timestamp,
                 time_slot: timeSlot,
                 sbp_1: sbp_1, dbp_1: dbp_1, pulse_1: pulse_1, sbp_2: sbp_2, dbp_2: dbp_2, pulse_2: pulse_2
             });
@@ -814,7 +725,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('recordFormTitle').innerText = "建立新紀錄";
                 saveRecordBtn.innerText = "確定建立 ✓";
                 document.getElementById('recordDate').value = getTodayString();
-                
                 navigateTo('dashboard');
             } else {
                 Swal.fire('失敗', response.message, 'error');
@@ -832,10 +742,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateStr = document.getElementById('medicalDate').value;
             if(!dateStr) { Swal.fire('提示', '請選擇檢查日期！', 'warning'); return; }
             const timestamp = new Date(dateStr).getTime();
-            
             const fileInput = document.getElementById('reportFile');
             const file = fileInput.files[0];
-
             const originalText = saveMedicalBtn.innerText;
             saveMedicalBtn.innerText = "處理中...";
             saveMedicalBtn.disabled = true;
@@ -848,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (response.success) {
-                    showToast('success', '就醫紀錄已儲存！');
+                    showToast('success', '回診紀錄已儲存！');
                     loadMedicalData();
                     const fileNameDisplay = document.getElementById('fileNameDisplay');
                     if(fileNameDisplay) { fileNameDisplay.style.display = 'none'; fileNameDisplay.textContent = ''; }
@@ -859,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             if (file) {
-                if (file.size > 5 * 1024 * 1024) { Swal.fire('檔案太大', '圖片太大囉！請選擇 5MB 以下的照片。', 'error'); saveMedicalBtn.innerText = originalText; saveMedicalBtn.disabled = false; return; }
+                if (file.size > 5 * 1024 * 1024) { Swal.fire('檔案太大', '圖片太大囉！', 'error'); saveMedicalBtn.innerText = originalText; saveMedicalBtn.disabled = false; return; }
                 saveMedicalBtn.innerText = "圖片上傳中...";
                 const reader = new FileReader();
                 reader.onload = function(e) {
