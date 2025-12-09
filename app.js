@@ -152,6 +152,13 @@ function navigateTo(sectionId) {
     if (sectionId === 'hero' || sectionId === 'login') {
         if(navLinksContainer) navLinksContainer.style.display = 'none';
         if(hamburger) hamburger.style.display = 'none';
+        
+        // ★★★ 修正：如果是切換到登入頁，清空輸入框 ★★★
+        if(sectionId === 'login') {
+            const loginForm = document.getElementById('loginForm');
+            if(loginForm) loginForm.reset();
+        }
+
     } else {
         if(navLinksContainer) navLinksContainer.style.display = ''; 
         if(hamburger) hamburger.style.display = '';
@@ -185,6 +192,11 @@ async function handleLogin(username, password) {
 
     if (result.success) {
         localStorage.setItem('dada_api_secret', result.apiSecret);
+        
+        // ★★★ 修正：登入成功後，立刻清空表單 ★★★
+        const loginForm = document.getElementById('loginForm');
+        if(loginForm) loginForm.reset();
+
         Swal.fire({
             icon: 'success',
             title: '登入成功',
@@ -203,6 +215,11 @@ async function handleLogin(username, password) {
 
 function handleLogout() {
     localStorage.removeItem('dada_api_secret');
+    
+    // ★★★ 修正：登出時，明確清空表單 ★★★
+    const loginForm = document.getElementById('loginForm');
+    if(loginForm) loginForm.reset();
+
     Swal.fire({
         title: '已登出',
         text: '期待下次再見！',
@@ -528,6 +545,7 @@ function updateChart(days) {
     });
 }
 
+// --- 紀錄列表單項 ---
 function createRecordListItem(record) {
     let sbp = Number(record.sbp_1);
     let dbp = Number(record.dbp_1);
@@ -593,12 +611,10 @@ window.editRecord = function(recordId) {
 // ★★★ 刪除功能 (修正版)，掛載到 window ★★★
 window.deleteRecord = function(recordId) {
     showConfirm('確定要刪除紀錄嗎？', '刪除後無法復原喔！', async () => {
-        // 使用 callApi 發送請求，並自動帶上 Secret
         const response = await callApi({ action: 'deleteBloodRecord', id: recordId });
         if (response.success) {
             showToast('success', '已刪除紀錄！');
             loadDashboardData();
-            // 如果在歷史頁面，也刷新歷史列表
             if(document.getElementById('historyList').offsetParent !== null) loadHistoryData();
         } else {
             Swal.fire('錯誤', response.message, 'error');
