@@ -3,6 +3,38 @@
 let globalRecords = [];
 let myChart = null;
 
+// --- API 請求封裝函式 (核心修改) ---
+async function callApi(payload) {
+    // 除了 login 動作外，其他都必須帶上 apiSecret
+    if (payload.action !== 'login') {
+        const secret = localStorage.getItem('dada_api_secret');
+        if (!secret) {
+            handleLogout(); // 沒 Token 直接登出
+            return { success: false, message: '請先登入' };
+        }
+        payload.apiSecret = secret;
+        payload.userId = CONFIG.DEFAULT_USER_ID; // 統一補上 UserId
+    }
+
+    try {
+        const response = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        // 如果後端回傳權限不足，強制登出
+        if (!result.success && result.message.includes('權限')) {
+            handleLogout();
+        }
+        return result;
+    } catch (error) {
+        console.error('API Error:', error);
+        return { success: false, message: '網路連線錯誤' };
+    }
+}
+
 // --- 輔助函式：取得本地端今天的日期字串 (YYYY-MM-DD) ---
 function getTodayString() {
     const now = new Date();
@@ -55,6 +87,7 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     div.className = 'average-summary-block';
     
     // 使用 val-group 避免跑版，使用 text-purple 保持列表紫色
+    // 修改：移除手動空格，由 CSS .val-group > span:nth-child(2) 控制 margin
     div.innerHTML = `
         <div style="flex: 1;">
             <div style="margin-bottom: 5px;">
@@ -154,7 +187,42 @@ function navigateTo(sectionId) {
     else if (sectionId === 'medicalRecord') loadMedicalData();
 }
 
+// --- 登入邏輯修改 ---
+async function handleLogin(username, password) {
+    const submitBtn = document.querySelector('#loginForm button');
+    submitBtn.innerText = "驗證中...";
+    submitBtn.disabled = true;
+
+    const result = await callApi({
+        action: 'login',
+        username: username,
+        password: password
+    });
+
+    if (result.success) {
+        // ★ 關鍵：將後端回傳的 Secret 存起來
+        localStorage.setItem('dada_api_secret', result.apiSecret);
+        
+        Swal.fire({
+            icon: 'success',
+            title: '登入成功',
+            text: '歡迎回來！',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            navigateTo('dashboard');
+        });
+    } else {
+        Swal.fire('登入失敗', result.message, 'error');
+    }
+    
+    submitBtn.innerText = "解鎖我的健康紀錄"; 
+    submitBtn.disabled = false;
+}
+
+// --- 登出邏輯 ---
 function handleLogout() {
+    localStorage.removeItem('dada_api_secret'); // 清除 Secret
     Swal.fire({
         title: '已登出',
         text: '期待下次再見！',
@@ -166,76 +234,64 @@ function handleLogout() {
     });
 }
 
-function loadDashboardData() {
+// --- 修改後的 loadDashboardData ---
+async function loadDashboardData() {
     const chartWrapper = document.querySelector('.chart-wrapper');
     const chartEmpty = document.getElementById('chartEmptyState');
     const canvas = document.getElementById('bpChart');
 
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getBloodRecords', userId: 'admin-user-001' })
-    })
-    .then(res => res.json())
-    .then(response => {
-        if (response.success) {
-            globalRecords = response.data;
-            renderRecordList(globalRecords);
-            
-            if (globalRecords.length > 0) {
-                canvas.style.display = 'block';
-                if(chartEmpty) chartEmpty.style.display = 'none';
-                updateChart(7);
-            } else {
-                canvas.style.display = 'none';
-                if(chartEmpty) chartEmpty.style.display = 'block';
-            }
+    // 改用 callApi，不用自己組 fetch
+    const response = await callApi({ action: 'getBloodRecords' });
+
+    if (response.success) {
+        globalRecords = response.data;
+        renderRecordList(globalRecords);
+        
+        if (globalRecords.length > 0) {
+            canvas.style.display = 'block';
+            if(chartEmpty) chartEmpty.style.display = 'none';
+            updateChart(7);
+        } else {
+            canvas.style.display = 'none';
+            if(chartEmpty) chartEmpty.style.display = 'block';
         }
-    })
-    .catch(err => console.error(err));
+    }
 }
 
-function loadHistoryData() {
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getBloodRecords', userId: 'admin-user-001' })
-    })
-    .then(res => res.json())
-    .then(response => {
-        if (response.success) {
-            globalRecords = response.data;
-            
-            const yearSelect = document.getElementById('historyYear');
-            const monthSelect = document.getElementById('historyMonth');
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+// --- 修改後的 loadHistoryData ---
+async function loadHistoryData() {
+    const response = await callApi({ action: 'getBloodRecords' });
+    if (response.success) {
+        globalRecords = response.data;
+        
+        const yearSelect = document.getElementById('historyYear');
+        const monthSelect = document.getElementById('historyMonth');
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-            if (yearSelect && yearSelect.options.length === 0) {
-                for (let i = 0; i < 6; i++) {
-                    const y = currentYear - i;
-                    const opt = document.createElement('option');
-                    opt.value = y;
-                    opt.text = y + ' 年';
-                    yearSelect.add(opt);
-                }
-                yearSelect.value = currentYear;
-
-                for (let i = 1; i <= 12; i++) {
-                    const m = String(i).padStart(2, '0');
-                    const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.text = m + ' 月';
-                    monthSelect.add(opt);
-                }
-                monthSelect.value = currentMonth;
+        if (yearSelect && yearSelect.options.length === 0) {
+            for (let i = 0; i < 6; i++) {
+                const y = currentYear - i;
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.text = y + ' 年';
+                yearSelect.add(opt);
             }
-            
-            filterAndRenderHistory();
+            yearSelect.value = currentYear;
+
+            for (let i = 1; i <= 12; i++) {
+                const m = String(i).padStart(2, '0');
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.text = m + ' 月';
+                monthSelect.add(opt);
+            }
+            monthSelect.value = currentMonth;
         }
-    })
-    .catch(err => console.error(err));
+        
+        filterAndRenderHistory();
+    }
 }
 
 function filterAndRenderHistory() {
@@ -255,19 +311,12 @@ function filterAndRenderHistory() {
     renderHistoryList(filteredRecords);
 }
 
-function loadMedicalData() {
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getMedicalRecords', userId: 'admin-user-001' })
-    })
-    .then(res => res.json())
-    .then(response => {
-        if (response.success) {
-            renderMedicalList(response.data);
-        }
-    })
-    .catch(err => console.error(err));
+// --- 修改後的 loadMedicalData ---
+async function loadMedicalData() {
+    const response = await callApi({ action: 'getMedicalRecords' });
+    if (response.success) {
+        renderMedicalList(response.data);
+    }
 }
 
 function renderRecordList(records) {
@@ -651,8 +700,18 @@ window.deleteMedicalRecord = function(recordId) {
 
 // ★★★ 關鍵修改：將事件監聽器改為 DOMContentLoaded，加快執行速度，解決 Safari 閃爍問題 ★★★
 document.addEventListener('DOMContentLoaded', () => {
+    // 檢查是否已登入 (有 Secret)
+    const hasSecret = localStorage.getItem('dada_api_secret');
     const hash = window.location.hash.substring(1);
-    if(hash) { navigateTo(hash); } else { navigateTo('hero'); }
+
+    // 如果沒有 Secret 且不是在首頁或登入頁，強制導回
+    if (!hasSecret && hash !== 'hero' && hash !== 'login') {
+        navigateTo('hero');
+    } else {
+        if(hash) { navigateTo(hash); } else { navigateTo('hero'); }
+    }
+
+    // ... (DOM 元素綁定邏輯不變) ...
 
     const dateInput = document.getElementById('recordDate');
     if(dateInput) dateInput.value = getTodayString();
@@ -708,92 +767,67 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputs = loginForm.querySelectorAll('input');
             const username = inputs[0].value;
             const password = inputs[1].value;
-            const submitBtn = loginForm.querySelector('button');
             if (!username || !password) { 
-                Swal.fire('提示', '請輸入帳號和密碼才能解鎖喔！', 'warning');
+                Swal.fire('提示', '請輸入帳號和密碼！', 'warning');
                 return; 
             }
-            submitBtn.innerText = "驗證中...";
-            submitBtn.disabled = true;
-            fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'login', username: username, password: password })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) { 
-                    Swal.fire({
-                        icon: 'success',
-                        title: '登入成功',
-                        text: '歡迎回來！',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        navigateTo('dashboard');
-                        inputs[1].value = ''; 
-                    });
-                } 
-                else { Swal.fire('登入失敗', data.message, 'error'); }
-            })
-            .catch(err => Swal.fire('錯誤', '連線發生問題', 'error'))
-            .finally(() => { submitBtn.innerText = "解鎖我的健康紀錄"; submitBtn.disabled = false; });
+            handleLogin(username, password);
         });
     }
 
     const recordForm = document.getElementById('recordForm');
     const saveRecordBtn = document.getElementById('saveRecordBtn');
     if (saveRecordBtn) {
-        saveRecordBtn.addEventListener('click', function(e) {
+        saveRecordBtn.addEventListener('click', async function(e) {
             e.preventDefault();
+            // ... (取得欄位值的邏輯不變)
             const recordId = document.getElementById('recordId').value;
-            const dateStr = document.getElementById('recordDate').value;
-            
-            const timestamp = new Date(dateStr).getTime();
-
-            const timeSlotBtn = document.querySelector('.time-btn.selected');
-            const timeSlotText = timeSlotBtn ? timeSlotBtn.innerText : '早上';
-            const timeSlot = timeSlotText.includes('晚') ? 'evening' : 'morning';
             const sbp_1 = document.getElementById('sbp_1').value;
             const dbp_1 = document.getElementById('dbp_1').value;
             const pulse_1 = document.getElementById('pulse_1').value;
             const sbp_2 = document.getElementById('sbp_2').value;
             const dbp_2 = document.getElementById('dbp_2').value;
             const pulse_2 = document.getElementById('pulse_2').value;
-            if (!sbp_1 || !dbp_1) { Swal.fire('提示', '請至少填寫第一次測量的血壓數值喔！', 'warning'); return; }
-            const originalText = saveRecordBtn.innerText;
+            const timeSlotBtn = document.querySelector('.time-btn.selected');
+            const timeSlotText = timeSlotBtn ? timeSlotBtn.innerText : '早上';
+            const timeSlot = timeSlotText.includes('晚') ? 'evening' : 'morning';
+
+            if (!sbp_1) { Swal.fire('提示', '請至少填寫第一次測量的血壓數值！', 'warning'); return; }
+            
             saveRecordBtn.innerText = "儲存中...";
             saveRecordBtn.disabled = true;
+
             const action = recordId ? 'updateBloodRecord' : 'addBloodRecord';
-            fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: action, userId: 'admin-user-001', id: recordId, date: timestamp, time_slot: timeSlot,
-                    sbp_1: sbp_1, dbp_1: dbp_1, pulse_1: pulse_1, sbp_2: sbp_2, dbp_2: dbp_2, pulse_2: pulse_2
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('success', '紀錄已儲存！');
-                    recordForm.reset();
-                    document.getElementById('recordId').value = ''; 
-                    document.getElementById('recordFormTitle').innerText = "建立新紀錄";
-                    saveRecordBtn.innerText = "確定建立 ✓";
-                    document.getElementById('recordDate').value = getTodayString();
-                    navigateTo('dashboard');
-                } else { Swal.fire('失敗', data.message, 'error'); }
-            })
-            .catch(err => Swal.fire('錯誤', '連線發生問題', 'error'))
-            .finally(() => { saveRecordBtn.innerText = document.getElementById('recordId').value ? "儲存修改 ✓" : "確定建立 ✓"; saveRecordBtn.disabled = false; });
+            // 呼叫 callApi
+            const response = await callApi({
+                action: action,
+                id: recordId, // 如果是新增，後端會忽略這個
+                date: new Date(document.getElementById('recordDate').value).getTime(),
+                time_slot: timeSlot,
+                sbp_1: sbp_1, dbp_1: dbp_1, pulse_1: pulse_1, sbp_2: sbp_2, dbp_2: dbp_2, pulse_2: pulse_2
+            });
+
+            if (response.success) {
+                showToast('success', '紀錄已儲存！');
+                document.getElementById('recordForm').reset();
+                document.getElementById('recordId').value = '';
+                document.getElementById('recordFormTitle').innerText = "建立新紀錄";
+                saveRecordBtn.innerText = "確定建立 ✓";
+                document.getElementById('recordDate').value = getTodayString();
+                
+                navigateTo('dashboard');
+            } else {
+                Swal.fire('失敗', response.message, 'error');
+            }
+            saveRecordBtn.innerText = document.getElementById('recordId').value ? "儲存修改 ✓" : "確定建立 ✓";
+            saveRecordBtn.disabled = false;
         });
     }
 
     const medicalForm = document.getElementById('medicalForm');
     const saveMedicalBtn = document.getElementById('saveMedicalBtn');
     if(saveMedicalBtn) {
-        saveMedicalBtn.addEventListener('click', function(e) {
+        saveMedicalBtn.addEventListener('click', async function(e) {
             e.preventDefault();
             const dateStr = document.getElementById('medicalDate').value;
             if(!dateStr) { Swal.fire('提示', '請選擇檢查日期！', 'warning'); return; }
@@ -806,28 +840,22 @@ document.addEventListener('DOMContentLoaded', () => {
             saveMedicalBtn.innerText = "處理中...";
             saveMedicalBtn.disabled = true;
 
-            const sendData = (fileData = null, fileName = null, mimeType = null) => {
-                fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'addMedicalRecord', userId: 'admin-user-001', check_date: timestamp,
-                        fileData: fileData, fileName: fileName, mimeType: mimeType
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('success', '就醫紀錄已儲存！');
-                        loadMedicalData();
-                        const fileNameDisplay = document.getElementById('fileNameDisplay');
-                        if(fileNameDisplay) { fileNameDisplay.style.display = 'none'; fileNameDisplay.textContent = ''; }
-                        if(fileInput) fileInput.value = '';
-                        document.getElementById('medicalDate').value = getTodayString();
-                    } else { Swal.fire('失敗', data.message, 'error'); }
-                })
-                .catch(err => Swal.fire('錯誤', '連線發生問題', 'error'))
-                .finally(() => { saveMedicalBtn.innerText = originalText; saveMedicalBtn.disabled = false; });
+            const sendData = async (fileData = null, fileName = null, mimeType = null) => {
+                const response = await callApi({
+                    action: 'addMedicalRecord',
+                    check_date: timestamp,
+                    fileData: fileData, fileName: fileName, mimeType: mimeType
+                });
+
+                if (response.success) {
+                    showToast('success', '就醫紀錄已儲存！');
+                    loadMedicalData();
+                    const fileNameDisplay = document.getElementById('fileNameDisplay');
+                    if(fileNameDisplay) { fileNameDisplay.style.display = 'none'; fileNameDisplay.textContent = ''; }
+                    if(fileInput) fileInput.value = '';
+                    document.getElementById('medicalDate').value = getTodayString();
+                } else { Swal.fire('失敗', response.message, 'error'); }
+                saveMedicalBtn.innerText = originalText; saveMedicalBtn.disabled = false;
             };
 
             if (file) {
