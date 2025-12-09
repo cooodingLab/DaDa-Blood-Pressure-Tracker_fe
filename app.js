@@ -55,7 +55,6 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
     div.className = 'average-summary-block';
     
     // 使用 val-group 避免跑版，使用 text-purple 保持列表紫色
-    // 數字前後保留空格以利閱讀
     div.innerHTML = `
         <div style="flex: 1;">
             <div style="margin-bottom: 5px;">
@@ -65,12 +64,12 @@ function renderSummaryBlock(container, sbpSum, dbpSum, pulseSum, count) {
             <div class="summary-data-row">
                 <div class="val-group">
                     <span style="font-size: 0.95rem; color: #5D4037;">血壓</span> 
-                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;"> ${finalAvgSbp}/${finalAvgDbp} </span> 
+                    <span style="color:#d32f2f; font-size:1.1rem; font-weight:800;">${finalAvgSbp}/${finalAvgDbp}</span> 
                     <span style="font-size: 0.8rem; color: #8A9C94;">mmHg</span>
                 </div>
                 <div class="val-group">
                     <span style="font-size: 0.95rem; color: #5D4037;">脈搏</span> 
-                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;"> ${finalAvgPulse} </span> 
+                    <span class="text-purple" style="font-size:1.1rem; font-weight:800;">${finalAvgPulse}</span> 
                     <span style="font-size: 0.8rem; color: #8A9C94;">bpm</span>
                 </div>
             </div>
@@ -131,11 +130,12 @@ function navigateTo(sectionId) {
     const navLinksContainer = document.querySelector('.nav-links');
     const hamburger = document.getElementById('hamburger');
     
+    // ★★★ 關鍵修改：JS 負責將 inline 的 display: none 移除或設為 none ★★★
     if (sectionId === 'hero' || sectionId === 'login') {
         if(navLinksContainer) navLinksContainer.style.display = 'none';
         if(hamburger) hamburger.style.display = 'none';
     } else {
-        if(navLinksContainer) navLinksContainer.style.display = ''; 
+        if(navLinksContainer) navLinksContainer.style.display = ''; // 清空 inline style，讓 CSS 的 display: flex 生效
         if(hamburger) hamburger.style.display = '';
     }
 
@@ -538,7 +538,7 @@ function updateChart(days) {
     });
 }
 
-// --- ★★★ 修改：紀錄列表單項 (改為顯示平均值) ★★★ ---
+// --- 紀錄列表單項 ---
 function createRecordListItem(record) {
     let sbp = Number(record.sbp_1);
     let dbp = Number(record.dbp_1);
@@ -649,7 +649,8 @@ window.deleteMedicalRecord = function(recordId) {
     });
 }
 
-window.addEventListener('load', () => {
+// ★★★ 關鍵修改：將事件監聽器改為 DOMContentLoaded，加快執行速度，解決 Safari 閃爍問題 ★★★
+document.addEventListener('DOMContentLoaded', () => {
     const hash = window.location.hash.substring(1);
     if(hash) { navigateTo(hash); } else { navigateTo('hero'); }
 
@@ -817,7 +818,7 @@ window.addEventListener('load', () => {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        showToast('success', '回診紀錄已儲存！');
+                        showToast('success', '就醫紀錄已儲存！');
                         loadMedicalData();
                         const fileNameDisplay = document.getElementById('fileNameDisplay');
                         if(fileNameDisplay) { fileNameDisplay.style.display = 'none'; fileNameDisplay.textContent = ''; }

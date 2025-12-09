@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!--  mobile app icon 開始 -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
-    <!--  mobile app icon 結束 -->
     <title>達達量血壓 – 血壓管理小幫手</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -26,7 +24,7 @@
                 <span></span>
             </div>
 
-            <div class="nav-links" id="navLinks">
+            <div class="nav-links" id="navLinks" style="display: none;">
                 <a href="#dashboard" class="nav-link" onclick="navigateTo('dashboard')">統計</a>
                 <a href="#newRecord" class="nav-link" onclick="navigateTo('newRecord')">建立</a>
                 <a href="#history" class="nav-link" onclick="navigateTo('history')">歷史</a>
@@ -79,7 +77,7 @@
                         <input type="text" class="form-input" placeholder="請輸入您的帳號">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">使用者密碼</label>
+                        <label class="form-label">通關密碼</label>
                         <input type="password" class="form-input" placeholder="請輸入您的密碼">
                     </div>
                     <button type="submit" class="btn" style="width: 100%; padding: 15px;">解鎖我的健康紀錄</button>
